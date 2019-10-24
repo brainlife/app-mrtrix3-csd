@@ -94,7 +94,17 @@ else
 fi
 
 # convert to niftis
-mrconvert wmt_lmax${LMAX}_fod.mif -stride 1,2,3,4 ./csd/lmax${LMAX}.nii.gz -force -nthreads $NCORE
+[ ! -f ./csd/lmax${LMAX}.nii.gz ] && mrconvert wmt_lmax${LMAX}_fod.mif -stride 1,2,3,4 ./csd/lmax${LMAX}.nii.gz -force -nthreads $NCORE
 
 # copy response file
-cp wmt.txt ./csd/response.txt
+[ ! -f ./csd/response.txt ] && cp wmt.txt ./csd/response.txt
+
+# clean up
+if [ -f ./csd/csd.nii.gz ]; then
+        rm -rf *.mif* ./tmp *.b*
+else
+        echo "csd generation failed"
+        exit 1;
+fi
+
+echo "{\"tags\": [\"csd_${LMAX}\" ]}" > product.json
