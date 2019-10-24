@@ -5,12 +5,7 @@ set -e
 NCORE=8
 
 # make top dirs
-mkdir -p track
 mkdir -p csd
-mkdir -p mask
-mkdir -p brainmask
-mkdir -p wmc
-#mkdir -p tensor
 
 # set variables
 dwi=$(jq -r .dwi config.json)
