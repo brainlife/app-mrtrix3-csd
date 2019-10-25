@@ -100,7 +100,7 @@ fi
 [ ! -f ./csd/response.txt ] && cp wmt.txt ./csd/response.txt
 
 # clean up
-if [ -f ./csd/csd.nii.gz ]; then
+if [ -f ./csd/lmax${LMAX}.nii.gz ]; then
         rm -rf *.mif* ./tmp *.b*
 else
         echo "csd generation failed"
