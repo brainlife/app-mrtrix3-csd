@@ -12,10 +12,14 @@ dwi=$(jq -r .dwi config.json)
 bvecs=`jq -r '.bvecs' config.json`
 bvals=`jq -r '.bvals' config.json`
 brainmask=`jq -r '.brainmask' config.json`
+mask=`jq -r '.mask' config.json`
 LMAX=`jq -r '.lmax' config.json`
 
 # convert dwi to mrtrix format
 [ ! -f dwi.b ] && mrconvert -fslgrad $bvecs $bvals $dwi dwi.mif --export_grad_mrtrix dwi.b -nthreads $NCORE
+
+# convert 5tt mask
+[ ! -f 5tt.mif ] && mrconvert ${mask} 5tt.mif -nthreads $NCORE
 
 # create mask of dwi
 if [[ ${brainmask} == 'null' ]]; then
