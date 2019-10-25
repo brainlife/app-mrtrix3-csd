@@ -101,7 +101,7 @@ fi
 
 # clean up
 if [ -f ./csd/lmax${LMAX}.nii.gz ]; then
-        rm -rf *.mif* ./tmp *.b*
+        rm -rf *.mif* ./tmp *.b* *.txt*
 else
         echo "csd generation failed"
         exit 1;
