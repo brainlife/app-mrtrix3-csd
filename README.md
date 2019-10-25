@@ -1,5 +1,5 @@
 [![Abcdspec-compliant](https://img.shields.io/badge/ABCD_Spec-v1.1-green.svg)](https://github.com/brain-life/abcd-spec)
-[![Run on Brainlife.io](https://img.shields.io/badge/Brainlife-bl.app.239-blue.svg)](https://doi.org/10.25663/brainlife.app.239)
+[![Run on Brainlife.io](https://img.shields.io/badge/Brainlife-bl.app.238-blue.svg)](https://doi.org/10.25663/brainlife.app.238)
 
 # app-mrtrix3-csd
 This app will fit a csd with a user-inputted spherical harmonic order (lmax) using mrtrix3. This code was adapted from app-mrtrix3-act (https://brainlife.io/app/5aac2437f0b5260027e24ae1), written by Brent McPherson (bcmcpher@iu.edu).
@@ -19,7 +19,7 @@ This app will fit a csd with a user-inputted spherical harmonic order (lmax) usi
 
 ### On Brainlife.io
 
-You can submit this App online at [https://doi.org/10.25663/brainlife.app.239](https://doi.org/10.25663/brainlife.app.239) via the "Execute" tab.
+You can submit this App online at [https://doi.org/10.25663/brainlife.app.238](https://doi.org/10.25663/brainlife.app.238) via the "Execute" tab.
 
 ### Running Locally (on your machine)
 
