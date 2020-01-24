@@ -57,9 +57,85 @@ else
     fi
 fi
 
+## print the # of b0s
+echo Number of b0s: $NB0s 
+
+## extract the shells and # of volumes per shell
+BVALS=`mrinfo -shell_bvalues ${difm}.mif`
+COUNTS=`mrinfo -shell_sizes ${difm}.mif`
+
+## echo basic shell count summaries
+echo -n "Shell b-values: "; echo $BVALS
+echo -n "Unique Counts:  "; echo $COUNTS
+
+## echo max lmax per shell
+MLMAXS=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
+echo -n "Maximum Lmax:   "; echo $MLMAXS
+
+## find maximum lmax that can be computed within data
+MAXLMAX=`echo "$MLMAXS" | tr " " "\n" | sort -nr | head -n1`
+echo "Maximum Lmax across shells: $MAXLMAX"
+
+## if input $IMAXS is empty, set to $MAXLMAX
+if [ -z $LMAX ]; then
+    echo "No Lmax values requested."
+    echo "Using the maximum Lmax of $MAXLMAX by default."
+    LMAX=$MAXLMAX
+fi
+
+## check if more than 1 lmax passed
+NMAX=`echo $LMAX | wc -w`
+
+## find max of the requested list
+if [ $NMAX -gt 1 ]; then
+
+    ## pick the highest
+    MMAXS=`echo -n "$LMAX" | tr " " "\n" | sort -nr | head -n1`
+    echo "User requested Lmax(s) up to: $MMAXS"
+    LMAXS=$LMAX
+
+else
+
+    ## take the input
+    MMAXS=$LMAX
+	
+fi
+
+## make sure requested Lmax is possible - fix if not
+if [ $MMAXS -gt $MAXLMAX ]; then
+    
+    echo "Requested maximum Lmax of $MMAXS is too high for this data, which supports Lmax $MAXLMAX."
+    echo "Setting maximum Lmax to maximum allowed by the data: Lmax $MAXLMAX."
+    MMAXS=$MAXLMAX
+
+fi
+
+## create the list of the ensemble lmax values
+if [ $NMAX -eq 1 ]; then
+    
+    ## create array of lmaxs to use
+    emax=0
+    LMAXS=''
+	
+    ## while less than the max requested
+    while [ $emax -lt $MMAXS ]; do
+
+	## iterate
+	emax=$(($emax+2))
+	LMAXS=`echo -n $LMAXS; echo -n ' '; echo -n $emax`
+
+    done
+
+else
+
+    ## or just pass the list on
+    LMAXS=$LMAX
+
+fi
+
 ## create the correct length of lmax
 if [ $NB0s -eq 0 ]; then
-    RMAX=${LMAX}
+    RMAX=${MAXLMAX}
 else
     RMAX=0
 fi
@@ -69,7 +145,7 @@ iter=1
 while [ $iter -lt $(($NSHELL+1)) ]; do
     
     ## add the $MAXLMAX to the argument
-    RMAX=$RMAX,$LMAX
+    RMAX=$RMAX,$MAXLMAX
 
     ## update the iterator
     iter=$(($iter+1))
@@ -82,23 +158,64 @@ done
 #creating response (should take about 15min)
 if [ $MS -eq 0 ]; then
 	echo "Estimating CSD response function"
-	time dwi2response tournier dwi.mif wmt.txt -lmax ${LMAX} -force -nthreads $NCORE -tempdir ./tmp
+	time dwi2response tournier dwi.mif wmt.txt -lmax ${MAXLMAX} -force -nthreads $NCORE -tempdir ./tmp -quiet
 else
 	echo "Estimating MSMT CSD response function"
-	time dwi2response msmt_5tt dwi.mif 5tt.mif wmt.txt gmt.txt csf.txt -mask mask.mif -lmax ${RMAX} -tempdir ./tmp -force -nthreads $NCORE
+	time dwi2response msmt_5tt dwi.mif 5tt.mif wmt.txt gmt.txt csf.txt -mask mask.mif -lmax ${RMAX} -tempdir ./tmp -force -nthreads $NCORE -quiet
 fi
 
 # fitting CSD FOD of lmax
 if [ $MS -eq 0 ]; then
-	echo "Fitting CSD FOD of Lmax ${LMAX}..."
-	time dwi2fod -mask mask.mif csd dwi.mif wmt.txt wmt_lmax${LMAX}_fod.mif -lmax ${LMAX} -force -nthreads $NCORE
+
+    for lmax in $LMAXS; do
+
+	echo "Fitting CSD FOD of Lmax ${lmax}..."
+	time dwi2fod -mask ${mask}.mif csd ${difm}.mif wmt.txt wmt_lmax${lmax}_fod.mif -lmax $lmax -force -nthreads $NCORE -quiet
+
+	## intensity normalization of CSD fit
+	# if [ $NORM == 'true' ]; then
+	#     #echo "Performing intensity normalization on Lmax $lmax..."
+	#     ## function is not implemented for singleshell data yet...
+	#     ## add check for fails / continue w/o?
+	# fi
+	
+    done
+    
 else
-	echo "Estimating MSMT CSD FOD of Lmax ${LMAX}"
-	time dwi2fod msmt_csd dwi.mif wmt.txt wmt_lmax${LMAX}_fod.mif  gmt.txt gmt_lmax${LMAX}_fod.mif csf.txt csf_lmax${LMAX}_fod.mif -force -nthreads $NCORE
+
+    for lmax in $LMAXS; do
+
+	echo "Fitting MSMT CSD FOD of Lmax ${lmax}..."
+	time dwi2fod msmt_csd ${difm}.mif wmt.txt wmt_lmax${lmax}_fod.mif gmt.txt gmt_lmax${lmax}_fod.mif csf.txt csf_lmax${lmax}_fod.mif -mask ${mask}.mif -lmax $lmax,$lmax,$lmax -force -nthreads $NCORE -quiet
+
+	#if [ $NORM == 'true' ]; then
+
+	    #echo "Performing multi-tissue intensity normalization on Lmax $lmax..."
+	    #mtnormalise -mask ${mask}.mif wmt_lmax${lmax}_fod.mif wmt_lmax${lmax}_norm.mif gmt_lmax${lmax}_fod.mif gmt_lmax${lmax}_norm.mif csf_lmax${lmax}_fod.mif csf_lmax${lmax}_norm.mif -force -nthreads $NCORE -quiet
+
+	    ## check for failure / continue w/o exiting
+	    #if [ -z wmt_lmax${lmax}_norm.mif ]; then
+		#echo "Multi-tissue intensity normalization failed for Lmax $lmax."
+		#echo "This processing step will not be applied moving forward."
+		#NORM='false'
+	    #fi
+
+	#fi
+
+    done
+    
 fi
 
 # convert to niftis
-[ ! -f ./csd/lmax${LMAX}.nii.gz ] && mrconvert wmt_lmax${LMAX}_fod.mif -stride 1,2,3,4 ./csd/lmax${LMAX}.nii.gz -force -nthreads $NCORE
+for lmax in $LMAXS; do
+    
+    #if [ $NORM == 'true' ]; then
+	#mrconvert wmt_lmax${lmax}_norm.mif -stride 1,2,3,4 lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
+    #else
+	mrconvert wmt_lmax${lmax}_fod.mif -stride 1,2,3,4 lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
+    #fi
+
+done
 
 # copy response file
 [ ! -f ./csd/response.txt ] && cp wmt.txt ./csd/response.txt
@@ -111,4 +228,4 @@ else
         exit 1;
 fi
 
-echo "{\"tags\": [\"csd_${LMAX}\" ]}" > product.json
+echo "{\"tags\": [\"csd_${MAXLMAX}\" ]}" > product.json
