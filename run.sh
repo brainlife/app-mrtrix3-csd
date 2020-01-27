@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 NCORE=8
 
@@ -13,21 +13,27 @@ bvecs=`jq -r '.bvecs' config.json`
 bvals=`jq -r '.bvals' config.json`
 brainmask=`jq -r '.brainmask' config.json`
 mask=`jq -r '.mask' config.json`
-LMAX=`jq -r '.lmax' config.json`
+IMAXS=`jq -r '.lmax' config.json`
 
 # convert dwi to mrtrix format
 [ ! -f dwi.b ] && mrconvert -fslgrad $bvecs $bvals $dwi dwi.mif --export_grad_mrtrix dwi.b -nthreads $NCORE
+
+difm='dwi'
 
 # convert 5tt mask
 [ ! -f 5tt.mif ] && mrconvert ${mask} 5tt.mif -nthreads $NCORE
 
 # create mask of dwi
-if [[ ${brainmask} == 'null' ]]; then
-	[ ! -f mask.mif ] && dwi2mask dwi.mif mask.mif -nthreads $NCORE
-else
-	echo "brainmask input exists. converting to mrtrix format"
-	mrconvert ${brainmask} -stride 1,2,3,4 mask.mif -force -nthreads $NCORE
+if [ ! -f mask.mif ]; then
+	if [[ ${brainmask} == 'null' ]]; then
+		[ ! -f mask.mif ] && dwi2mask dwi.mif mask.mif -nthreads $NCORE
+	else
+		echo "brainmask input exists. converting to mrtrix format"
+		mrconvert ${brainmask} -stride 1,2,3,4 mask.mif -force -nthreads $NCORE
+	fi
 fi
+
+mask='mask'
 
 # extract b0 image from dwi
 [ ! -f b0.mif ] && dwiextract dwi.mif - -bzero | mrmath - mean b0.mif -axis 3 -nthreads $NCORE
@@ -77,28 +83,24 @@ MAXLMAX=`echo "$MLMAXS" | tr " " "\n" | sort -nr | head -n1`
 echo "Maximum Lmax across shells: $MAXLMAX"
 
 ## if input $IMAXS is empty, set to $MAXLMAX
-if [ -z $LMAX ]; then
+if [ ${IMAXS} == 'null' ]; then
     echo "No Lmax values requested."
     echo "Using the maximum Lmax of $MAXLMAX by default."
-    LMAX=$MAXLMAX
+    IMAXS=$MAXLMAX
 fi
 
 ## check if more than 1 lmax passed
-NMAX=`echo $LMAX | wc -w`
+NMAX=`echo $IMAXS | wc -w`
 
 ## find max of the requested list
 if [ $NMAX -gt 1 ]; then
 
     ## pick the highest
-    MMAXS=`echo -n "$LMAX" | tr " " "\n" | sort -nr | head -n1`
+    MMAXS=`echo -n "$IMAXS" | tr " " "\n" | sort -nr | head -n1`
     echo "User requested Lmax(s) up to: $MMAXS"
-    LMAXS=$LMAX
-
+    LMAXS=$IMAXS
 else
-
-    ## take the input
-    MMAXS=$LMAX
-	
+    MMAXS=$IMAXS
 fi
 
 ## make sure requested Lmax is possible - fix if not
@@ -129,7 +131,7 @@ if [ $NMAX -eq 1 ]; then
 else
 
     ## or just pass the list on
-    LMAXS=$LMAX
+    LMAXS=$IMAXS
 
 fi
 
