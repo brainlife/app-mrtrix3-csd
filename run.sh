@@ -11,17 +11,28 @@ mkdir -p csd
 dwi=$(jq -r .dwi config.json)
 bvecs=`jq -r '.bvecs' config.json`
 bvals=`jq -r '.bvals' config.json`
+anat=`jq -r '.anat' config.json`
 brainmask=`jq -r '.brainmask' config.json`
 mask=`jq -r '.mask' config.json`
 IMAXS=`jq -r '.lmax' config.json`
+premask=`jq -r '.premask' config.json`
 
 # convert dwi to mrtrix format
 [ ! -f dwi.b ] && mrconvert -fslgrad $bvecs $bvals $dwi dwi.mif --export_grad_mrtrix dwi.b -nthreads $NCORE
 
 difm='dwi'
 
+# convert anat
+[ ! -f t1.mif ] && mrconvert ${anat} t1.mif -nthreads $NCORE
+
+anat='t1'
+
 # convert 5tt mask
-[ ! -f 5tt.mif ] && mrconvert ${mask} 5tt.mif -nthreads $NCORE
+if [ -f ${mask} ]; then
+	[ ! -f 5tt.mif ] && mrconvert ${mask} 5tt.mif -nthreads $NCORE
+else
+	5ttgen fsl ${anat}.mif 5tt.mif -nocrop -sgm_amyg_hipp -tempdir ./tmp -force $([ "$PREMASK" == "true" ] && echo "-premasked") -nthreads $NCORE -quiet
+fi
 
 # create mask of dwi
 if [ ! -f mask.mif ]; then
