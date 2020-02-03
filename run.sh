@@ -225,7 +225,7 @@ for lmax in $LMAXS; do
     #if [ $NORM == 'true' ]; then
 	#mrconvert wmt_lmax${lmax}_norm.mif -stride 1,2,3,4 lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
     #else
-	mrconvert wmt_lmax${lmax}_fod.mif -stride 1,2,3,4 lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
+	mrconvert wmt_lmax${lmax}_fod.mif -stride 1,2,3,4 ./csd/lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
     #fi
 
 done
