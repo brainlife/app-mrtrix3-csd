@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=8,walltime=3:00:00
+#PBS -l nodes=1:ppn=8,walltime=6:00:00
 #PBS -N app-mrtrix3-csd
 
 time singularity exec -e docker://brainlife/mrtrix3:3.0_RC3 ./run.sh
