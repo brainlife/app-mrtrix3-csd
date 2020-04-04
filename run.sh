@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/basnh
 
 #set -e
 
@@ -16,6 +16,7 @@ brainmask=`jq -r '.brainmask' config.json`
 mask=`jq -r '.mask' config.json`
 IMAXS=`jq -r '.lmax' config.json`
 premask=`jq -r '.premask' config.json`
+NORM=`jq -r '.norm' config.json`
 
 # convert dwi to mrtrix format
 [ ! -f dwi.b ] && mrconvert -fslgrad $bvecs $bvals $dwi dwi.mif --export_grad_mrtrix dwi.b -nthreads $NCORE
@@ -201,19 +202,19 @@ else
 	echo "Fitting MSMT CSD FOD of Lmax ${lmax}..."
 	time dwi2fod msmt_csd ${difm}.mif wmt.txt wmt_lmax${lmax}_fod.mif gmt.txt gmt_lmax${lmax}_fod.mif csf.txt csf_lmax${lmax}_fod.mif -mask ${mask}.mif -lmax $lmax,$lmax,$lmax -force -nthreads $NCORE -quiet
 
-	#if [ $NORM == 'true' ]; then
+	if [ $NORM == 'true' ]; then
 
-	    #echo "Performing multi-tissue intensity normalization on Lmax $lmax..."
-	    #mtnormalise -mask ${mask}.mif wmt_lmax${lmax}_fod.mif wmt_lmax${lmax}_norm.mif gmt_lmax${lmax}_fod.mif gmt_lmax${lmax}_norm.mif csf_lmax${lmax}_fod.mif csf_lmax${lmax}_norm.mif -force -nthreads $NCORE -quiet
+	   echo "Performing multi-tissue intensity normalization on Lmax $lmax..."
+	   mtnormalise -mask ${mask}.mif wmt_lmax${lmax}_fod.mif wmt_lmax${lmax}_norm.mif gmt_lmax${lmax}_fod.mif gmt_lmax${lmax}_norm.mif csf_lmax${lmax}_fod.mif csf_lmax${lmax}_norm.mif -force -nthreads $NCORE -quiet
 
-	    ## check for failure / continue w/o exiting
-	    #if [ -z wmt_lmax${lmax}_norm.mif ]; then
-		#echo "Multi-tissue intensity normalization failed for Lmax $lmax."
-		#echo "This processing step will not be applied moving forward."
-		#NORM='false'
-	    #fi
+	   # check for failure / continue w/o exiting
+	   if [ -z wmt_lmax${lmax}_norm.mif ]; then
+	      echo "Multi-tissue intensity normalization failed for Lmax $lmax."
+	      echo "This processing step will not be applied moving forward."
+	      NORM='false'
+	   fi
 
-	#fi
+	fi
 
     done
     
@@ -222,11 +223,11 @@ fi
 # convert to niftis
 for lmax in $LMAXS; do
     
-    #if [ $NORM == 'true' ]; then
-	#mrconvert wmt_lmax${lmax}_norm.mif -stride 1,2,3,4 lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
-    #else
-	mrconvert wmt_lmax${lmax}_fod.mif -stride 1,2,3,4 ./csd/lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
-    #fi
+    if [ $NORM == 'true' ]; then
+       mrconvert wmt_lmax${lmax}_norm.mif -stride 1,2,3,4 ./csd/lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
+    else
+       mrconvert wmt_lmax${lmax}_fod.mif -stride 1,2,3,4 ./csd/lmax${lmax}.nii.gz -force -nthreads $NCORE -quiet
+    fi
 
 done
 
@@ -234,7 +235,7 @@ done
 [ ! -f ./csd/response.txt ] && cp wmt.txt ./csd/response.txt
 
 # clean up
-if [ -f ./csd/lmax${LMAX}.nii.gz ]; then
+if [ -f ./csd/lmax${IMAXS}.nii.gz ]; then
         rm -rf *.mif* ./tmp *.b* *.txt*
 else
         echo "csd generation failed"
