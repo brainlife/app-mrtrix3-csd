@@ -8,7 +8,7 @@ NCORE=8
 mkdir -p csd
 
 # set variables
-dwi=$(jq -r .dwi config.json)
+dwi=`jq -r .dwi config.json`
 bvecs=`jq -r '.bvecs' config.json`
 bvals=`jq -r '.bvals' config.json`
 anat=`jq -r '.anat' config.json`
